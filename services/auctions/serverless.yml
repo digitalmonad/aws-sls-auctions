@@ -1,0 +1,29 @@
+org: auctionz
+app: auctions
+service: auctions-service
+
+# all of above is config for Serverless Framework dashboard
+
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: eu-central-1
+
+functions:
+  health:
+    handler: src/handler.handler
+    events:
+      - httpApi:
+          path: /auctions
+          method: get
+
+stages:
+  dev:
+    observability: true
+
+build:
+  esbuild:
+    bundle: true
+    sourcemap: true

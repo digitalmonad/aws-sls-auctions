@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 out/
+.serverless/
 .next/
 .nuxt/
 .output/
@@ -45,4 +46,3 @@ Thumbs.db
 .parcel-cache/
 .cache/
 *.tsbuildinfo
-
