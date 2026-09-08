@@ -23,6 +23,7 @@
   },
   "type": "module",
   "devDependencies": {
+    "serverless": "^4.0.0",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
