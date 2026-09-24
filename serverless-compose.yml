@@ -1,0 +1,14 @@
+# Serverless Compose orchestrates the independent Serverless services in this
+# monorepo. Each service still owns its own serverless.yml and CloudFormation
+# stack; this file only defines how the services are coordinated.
+services:
+  notifications:
+    # This service will be deployed from its own Serverless configuration.
+    path: services/notifications
+
+  auctions:
+    path: services/auctions
+    # Auctions depends on the notification queue and should be deployed after
+    # the notifications stack has published its outputs.
+    dependsOn:
+      - notifications
