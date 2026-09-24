@@ -1,29 +1,129 @@
+# Serverless Dashboard metadata. It identifies this service in the
+# Serverless Dashboard; it does not create AWS resources by itself.
 org: auctionz
 app: auctions
+
+# The logical name of this Serverless service. It is also used as part of
+# generated CloudFormation stack and Lambda names.
 service: auctions-service
 
-# all of above is config for Serverless Framework dashboard
-
+# Require a compatible Serverless Framework version for this configuration.
 frameworkVersion: "4"
 
+# Provider-wide AWS settings. These defaults apply to every Lambda function
+# unless a function overrides them locally.
 provider:
   name: aws
   runtime: nodejs22.x
   region: eu-central-1
+  memorySize: 256
+  stage: ${opt:stage, 'dev'}
+  environment:
+    # Values here become environment variables available to the Lambda code.
+    # Serverless resolves the ${...} expressions during deployment.
+    AUCTIONS_TABLE_NAME: ${self:custom.AuctionsTable.name}
+    # MAIL_QUEUE_URL: ${self:custom.MailQueue.url}
+    AUCTIONS_BUCKET_NAME: ${self:custom.AuctionsBucket.name}
+  iamRoleStatements:
+    # Import reusable IAM policy fragments from separate YAML files.
+    - ${file(infrastructure/iam/AuctionsTableIAM.yml):AuctionsTableIAM}
+    # - ${file(infrastructure/iam/MailQueueIAM.yml):MailQueueIAM}
+    - ${file(infrastructure/iam/AuctionsBucketIAM.yml):AuctionsBucketIAM}
 
+# Raw AWS infrastructure declared as CloudFormation resources. Serverless
+# includes these resources in the generated CloudFormation stack and creates,
+# updates, or deletes them together with the service deployment.
+resources:
+  Resources:
+    # The values are loaded from the referenced YAML files. The names on the
+    # left are CloudFormation logical IDs used by !Ref and !GetAtt below.
+    AuctionsTable: ${file(infrastructure/resources/AuctionsTable.yml):AuctionsTable}
+    AuctionsBucket: ${file(infrastructure/resources/AuctionsBucket.yml):AuctionsBucket}
+
+# Custom variables are reusable values and expressions owned by this service.
+# They are not AWS resources; they are configuration helpers referenced with
+# ${self:custom....} elsewhere in this file.
+custom:
+  # Fn::Sub is a native CloudFormation function. It builds the authorizer ARN
+  # from the AWS pseudo-parameters and the current Serverless stage without
+  # requiring a third-party pseudo-parameters plugin.
+  # authorizer:
+  #   Fn::Sub:
+  #     - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:auth-service-${Stage}-auth
+  #     - Stage: ${self:provider.stage}
+  AuctionsTable:
+    # !Ref returns the table name; !GetAtt returns its ARN.
+    name: !Ref AuctionsTable
+    arn: !GetAtt AuctionsTable.Arn
+  # MailQueue:
+  #   # Import CloudFormation outputs published by the notification service.
+  #   arn: ${cf:notification-service-${self:provider.stage}.MailQueueArn}
+  #   url: ${cf:notification-service-${self:provider.stage}.MailQueueUrl}
+  AuctionsBucket:
+    name: auctions-bucket-12345-${self:provider.stage}
+
+# Lambda functions and the events that invoke them. Serverless packages each
+# handler and creates the corresponding Lambda/API Gateway resources.
 functions:
-  health:
-    handler: src/handler.handler
+  createAuction:
+    handler: src/handlers/createAuction.handler
     events:
-      - httpApi:
+      - http:
+          method: POST
+          path: /auction
+          cors: true
+          # authorizer: ${self:custom.authorizer}
+
+  getAuctions:
+    handler: src/handlers/getAuctions.handler
+    events:
+      - http:
+          method: GET
           path: /auctions
-          method: get
+          cors: true
+          # authorizer: ${self:custom.authorizer}
+
+  getAuction:
+    handler: src/handlers/getAuction.handler
+    events:
+      - http:
+          method: GET
+          path: /auction/{id}
+          cors: true
+          # authorizer: ${self:custom.authorizer}
+
+  placeBid:
+    handler: src/handlers/placeBid.handler
+    events:
+      - http:
+          method: PATCH
+          path: auction/{id}/bid
+          cors: true
+          # authorizer: ${self:custom.authorizer}
+
+  uploadAuctionPicture:
+    handler: src/handlers/uploadAuctionPicture.handler
+    events:
+      - http:
+          method: PATCH
+          path: auction/{id}/picture
+          cors: true
+          # authorizer: ${self:custom.authorizer}
+
+  # processAuctions:
+  #   handler: src/handlers/processAuctions.handler
+  #   events:
+  #     - schedule: rate(1 minute)
 
 stages:
+  # Stage-specific Serverless Framework settings.
   dev:
     observability: true
 
+# Serverless Framework build settings. Esbuild bundles TypeScript and creates
+# Source maps are disabled for deployment because they substantially increase
+# the unzipped Lambda size when several handlers bundle AWS SDK v2.
 build:
   esbuild:
     bundle: true
-    sourcemap: true
+    sourcemap: false

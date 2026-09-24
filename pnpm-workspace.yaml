@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 allowBuilds:
+  aws-sdk: true
   serverless: true
 
 linkWorkspacePackages: true

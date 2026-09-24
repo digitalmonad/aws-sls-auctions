@@ -30,5 +30,8 @@
     "prettier": "^3.9.6",
     "serverless": "^4.0.0",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1693.0"
   }
 }
