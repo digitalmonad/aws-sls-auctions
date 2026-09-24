@@ -35,7 +35,6 @@ jobs:
   deploy:
     name: Deploy auctions
     runs-on: ubuntu-latest
-    environment: ${{ inputs.stage || 'dev' }}
 
     steps:
       - name: Checkout
